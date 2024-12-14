@@ -43,19 +43,34 @@ int main() {
     }
 
     // Specify values and lines to be considered
-    struct gpio_v2_line_values values;
+    struct gpio_v2_line_values onValues;
     values.mask = 1<<0; // Actives the 0th index of request.offsets
     values.bits = 1<<0; // Sets the 0th line to high
+
+    struct gpio_v2_line_values offValues;
+    values.mask = 1<<0;
+    values.bits = 0;
+
+    while(getchar() != EOF) {
+        sleep(1);
+        writeValues(&onValues);
+        sleep(1);
+        writeValues(&offValues);
+    }
+    writeValues(&offValues);
     
-    ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    return 0;
+}
+
+
+int writeValues(gpio_v2_line_values *values) {
+    
+    int ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, values);
     if (ret < 0) {
         perror("Failed to set line values");
         close(request.fd);
         return -1;
     }
-
-    // Successfully wrote line
-    return 0;
-
     return 0;
 }
+    
