@@ -1,6 +1,5 @@
 /** Program to open a device connected through the SPI terminal and feed some data through.
  * Fraser Crumpler
- * With help from chatGPT
  * 12/12/2024
  * 
  */
@@ -18,7 +17,7 @@
 
 #define SPI_DEV "/dev/spidev0.0"
 #define SPI_MODE SPI_MODE_0
-#define SPI_SPEED 100
+#define SPI_SPEED 20000000
 #define SPI_BITS_PER_WORD 8
 #define GPIO_DEV "/dev/gpiochip0"
 #define DATA 1
