@@ -41,37 +41,23 @@ int main() {
     if (rq_fd < 0) {
         return -1;
     }
+    usleep(500 * 1000);
     // Open SPI device
     int spi_fd = spi_init();
     if (spi_fd < 0) {
         return -1;
     }
+    usleep(500 * 1000);
     
     // Send software reset
     uint8_t message[10];
     message[0] = 0x12;
     ret = write_spi(spi_fd, message, 1);
+
     if (ret < 0) { return -1;}
-
-    printf("Busy: %d\n", is_busy(rq_fd));
-    usleep(1000 * 10);
-    printf("Busy2: %d\n", is_busy(rq_fd));
-    // Driver gate control command
-    message[0] = 0x01;
-    ret = write_spi(spi_fd, message, 1);
-    if (ret < 0) { return -1; }
-
-    // Driver gate control data
-    ret = set_data_command(rq_fd, DATA);
-    if (ret < 0) { return -1; }
-    message[0] = 0xFF;
-    message[1] = 0x01;
-    message[2] = 0x00; // 0x127, 0x00
-    ret = write_spi(spi_fd, message, 3);
-    if (ret < 0) { return -1; }
-
-    // Display ram size
+    usleep(500 * 1000);
     
+
 
     clean_gpio(rq_fd);
     close(spi_fd);
@@ -140,7 +126,7 @@ int gpio_init() {
     struct gpio_v2_line_attribute attribute_input;
     memset(&attribute_input, 0, sizeof(attribute_input));
     attribute_input.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
-    attribute_input.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_ACTIVE_LOW;
+    attribute_input.flags = GPIO_V2_LINE_FLAG_INPUT;
 
     struct gpio_v2_line_config_attribute config_attr_output;
     memset(&config_attr_output, 0, sizeof(config_attr_output));
@@ -168,7 +154,7 @@ int gpio_init() {
      *  CLK    Clock               23          ---------------    Not user control - SPI device
      *  D/C    GPIO25 Data/Command 22          1 for data, 0 for command  Output
      *  RST    GPIO17 Reset        11          0    active low       output
-     *  BSY    BUSY                18          Input, Active high
+     *  BSY    GPIO24 BUSY         18          Input, Active high
      */
     
     // Line request info
@@ -176,7 +162,7 @@ int gpio_init() {
     memset(&request, 0, sizeof(request));
     (request.offsets)[0] = 17;
     (request.offsets)[1] = 25;
-    (request.offsets)[2] = 18;
+    (request.offsets)[2] = 24;
     strncpy(request.consumer, "LED breadboard", sizeof(request.consumer));
     request.num_lines = 3; 
     request.event_buffer_size = 0;
@@ -201,7 +187,7 @@ int gpio_init() {
         return -1;
     }
 
-    sleep(1);
+    usleep(10 * 1000);
     // De activeate reset signal
     values.mask = 1<<0;
     values.bits = 1<<0;
@@ -211,6 +197,7 @@ int gpio_init() {
         close(request.fd);
         return -1;
     }
+
 
     return request.fd;
 }
@@ -243,11 +230,11 @@ int set_data_command(int rq_fd, int dataCommand) {
 
     // Set initial GPIO values
     struct gpio_v2_line_values values;
-    values.mask = 3;
+    values.mask = 2;
     if(dataCommand == DATA) {
         values.bits = 2;
     }
-    else {
+    else  {
         values.bits = 0;
     }
     int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
