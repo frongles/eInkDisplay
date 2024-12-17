@@ -30,6 +30,7 @@ int main() {
     struct gpio_v2_line_request request;
     memset(&request, 0, sizeof(request));
     request.offsets[0] = 17;
+    strncpy(request.consumer, "LED breadboard", sizeof(request.consumer));
     request.num_lines = 1; 
     request.event_buffer_size = 0;
     request.config = config;
@@ -43,34 +44,28 @@ int main() {
     }
 
     // Specify values and lines to be considered
-    struct gpio_v2_line_values onValues;
-    values.mask = 1<<0; // Actives the 0th index of request.offsets
-    values.bits = 1<<0; // Sets the 0th line to high
-
-    struct gpio_v2_line_values offValues;
-    values.mask = 1<<0;
-    values.bits = 0;
-
-    while(getchar() != EOF) {
+    struct gpio_v2_line_values values;
+    for (int i = 0; i < 10; i++) {
+        values.mask = 1<<0; // Actives the 0th index of request.offsets
+        values.bits = 1<<0; // Sets the 0th line to high
+        ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+        if (ret < 0) {
+            perror("Failed to set line values");
+            close(request.fd);
+            return -1;
+        }
         sleep(1);
-        writeValues(&onValues);
+        values.bits = 0;
+        ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+        if (ret < 0) {
+            perror("Failed to set line values");
+            close(request.fd);
+            return -1;
+        }
         sleep(1);
-        writeValues(&offValues);
     }
-    writeValues(&offValues);
-    
+
+    close(request.fd);
     return 0;
 }
 
-
-int writeValues(gpio_v2_line_values *values) {
-    
-    int ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, values);
-    if (ret < 0) {
-        perror("Failed to set line values");
-        close(request.fd);
-        return -1;
-    }
-    return 0;
-}
-    

@@ -18,44 +18,52 @@
 
 #define SPI_DEV "/dev/spidev0.0"
 #define SPI_MODE SPI_MODE_0
-#define SPI_SPEED 500000
+#define SPI_SPEED 100
 #define SPI_BITS_PER_WORD 8
 #define GPIO_DEV "/dev/gpiochip0"
 #define DATA 1
 #define COMMAND 0
+#define BUSY 0
+#define FREE 1
 
 
 int spi_init();
-int gpio_init(struct gpio_v2_line_request* request);;
+int gpio_init();
 int write_spi(int spi_fd, uint8_t* data, int length);
-int sw_reset(int spi_fd);
-int set_data_command(struct gpio_v2_line_request* request, int dataCommand);
-int clean_gpio(struct gpio_v2_line_request* request);
+int set_data_command(int rq_fd, int dataCommand);
+int clean_gpio(int rq_fd);
+int is_busy(int rq_fd);
 
 int main() {
     //E ink display must be connected and have sufficient source voltage before beginning
-    struct gpio_v2_line_request request;
-    int ret = gpio_init(&request);
-    if (ret < 0) {
+    int ret;
+    // Open relevant gpio lines
+    int rq_fd = gpio_init();
+    if (rq_fd < 0) {
         return -1;
     }
+    // Open SPI device
     int spi_fd = spi_init();
     if (spi_fd < 0) {
         return -1;
     }
-    // Software reset
+    
+    // Send software reset
     uint8_t message[10];
     message[0] = 0x12;
     ret = write_spi(spi_fd, message, 1);
     if (ret < 0) { return -1;}
+
+    printf("Busy: %d\n", is_busy(rq_fd));
     usleep(1000 * 10);
-    // Driver gaet control command
+    printf("Busy2: %d\n", is_busy(rq_fd));
+    // Driver gate control command
     message[0] = 0x01;
     ret = write_spi(spi_fd, message, 1);
     if (ret < 0) { return -1; }
 
     // Driver gate control data
-    ret = set_data_command(&request, DATA);
+    ret = set_data_command(rq_fd, DATA);
     if (ret < 0) { return -1; }
     message[0] = 0xFF;
     message[1] = 0x01;
@@ -63,15 +71,18 @@ int main() {
     ret = write_spi(spi_fd, message, 3);
     if (ret < 0) { return -1; }
 
-    clean_gpio(&request);
+    // Display ram size
+    
+
+    clean_gpio(rq_fd);
     close(spi_fd);
-    close(request.fd);
+    close(rq_fd);
 
     return 0;
 }    
     
 
-
+// Access the SPI driver and returns the open file descriptor
 int spi_init() {
 
     // opens SPI_STREAM for O_RDWR read and write
@@ -113,21 +124,45 @@ int spi_init() {
 
 
 // Connect to GPIO device, activates reset signal and configures for writing command.
-int gpio_init(struct gpio_v2_line_request* request) {
+int gpio_init() {
     // Open gpio device
     int gpio_fd = open(GPIO_DEV, O_RDONLY);
     if (gpio_fd < 0) {
         perror("gpio_init unable to open gpio device");
 	return -1;
     }
+
+    // Attributes for configuration
+    struct gpio_v2_line_attribute attribute_output;
+    memset(&attribute_output, 0, sizeof(attribute_output));
+    attribute_output.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
+    attribute_output.flags = GPIO_V2_LINE_FLAG_OUTPUT;
+
+    struct gpio_v2_line_attribute attribute_input;
+    memset(&attribute_input, 0, sizeof(attribute_input));
+    attribute_input.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
+    attribute_input.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_ACTIVE_LOW;
+
+    struct gpio_v2_line_config_attribute config_attr_output;
+    memset(&config_attr_output, 0, sizeof(config_attr_output));
+    config_attr_output.attr = attribute_output;
+    config_attr_output.mask = (1<<0) | (1<<1);
+
+    struct gpio_v2_line_config_attribute config_attr_input;
+    memset(&config_attr_input, 0, sizeof(config_attr_input));
+    config_attr_input.attr = attribute_input;
+    config_attr_input.mask = 1<<2;
+
     // Configuration for line request
     struct gpio_v2_line_config config;
     memset(&config, 0, sizeof(config)); // Initialises struct values to 0
     config.flags = GPIO_V2_LINE_FLAG_OUTPUT;  // indicate that the line will be used for output
-    config.num_attrs = 0; // No extra attributes; the config will apply to all requests
+    config.num_attrs = 2; // 2 attributes
+    config.attrs[0] = config_attr_output;
+    config.attrs[1] = config_attr_input;
 
 
-    /*  Description         boardNum    value     flags
+    /* Name    Description         boardNum    value     flags
      *  VCC    3.3V source         1           ---------------    Not user control - always on
      *  GND    Ground              9           ---------------    Not user control
      *  DIN    MOSI                19          ---------------    Not user control - SPI device
@@ -138,16 +173,18 @@ int gpio_init(struct gpio_v2_line_request* request) {
      */
     
     // Line request info
-    memset(request, 0, sizeof(*request));
-    (request->offsets)[0] = 17;
-    (request->offsets)[1] = 25;
-    strncpy(request->consumer, "LED breadboard", sizeof(request->consumer));
-    request->num_lines = 2; 
-    request->event_buffer_size = 0;
-    request->config = config;
+    struct gpio_v2_line_request request;
+    memset(&request, 0, sizeof(request));
+    (request.offsets)[0] = 17;
+    (request.offsets)[1] = 25;
+    (request.offsets)[2] = 18;
+    strncpy(request.consumer, "LED breadboard", sizeof(request.consumer));
+    request.num_lines = 3; 
+    request.event_buffer_size = 0;
+    request.config = config;
 
     // Make request
-    int ret = ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, request);
+    int ret = ioctl(gpio_fd, GPIO_V2_GET_LINE_IOCTL, &request);
     close(gpio_fd);
     if (ret < 0) {
         perror("gpio_init unable to get line from ioctl");
@@ -156,12 +193,12 @@ int gpio_init(struct gpio_v2_line_request* request) {
 
     // Set initial GPIO values
     struct gpio_v2_line_values values;
-    values.mask = 3; // Activate the 0th and 1st indexes from request offsets
-    values.bits = 0; // Set all values to 0
-    ret = ioctl(request->fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    values.mask = (1<<0) | (1<<1); // Activate the 0th and 1st indexes from request offsets
+    values.bits = 0x00; // Set all values to 0
+    ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to set initial line values");
-        close(request->fd);
+        close(request.fd);
         return -1;
     }
 
@@ -169,46 +206,22 @@ int gpio_init(struct gpio_v2_line_request* request) {
     // De activeate reset signal
     values.mask = 1<<0;
     values.bits = 1<<0;
-    ret = ioctl(request->fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to turn off reset pin");
-        close(request->fd);
+        close(request.fd);
         return -1;
     }
 
-
-    return 0;
+    return request.fd;
 }
 
 
-
-
-int sw_reset(int spi_fd) {
-    // Reset command
-    uint8_t write[] = {0x12};
-    uint8_t read[sizeof(write)] = {0};
-    struct spi_ioc_transfer ts;
-    memset(&ts, 0, sizeof(ts));    
-    ts.tx_buf = (unsigned long)write; // Buffer to write to SPI device
-    ts.rx_buf = (unsigned long)read; // Buffer to read from SPI device
-    ts.len = sizeof(write); // Temporarily change word read size from default
-    
-
-    if(ioctl(spi_fd, SPI_IOC_MESSAGE(1), &ts) < 0) {
-        perror("Failed to perform SPI transaction");
-        close(spi_fd);
-        return -1;
-    }
-
-    usleep(1000 * 10); // wait 10ms
-    return 0;
-}
 
 int write_spi(int spi_fd, uint8_t* commands, int length) {
     uint8_t *write = commands;
     uint8_t read[length];
     memset(read, 0, length);
-    
     struct spi_ioc_transfer ts;
     memset(&ts, 0, sizeof(ts));    
     ts.tx_buf = (unsigned long)write; // Buffer to write to SPI device
@@ -221,14 +234,13 @@ int write_spi(int spi_fd, uint8_t* commands, int length) {
         close(spi_fd);
         return -1;
     }
-
     return 0;
 }
 
     
 
 
-int set_data_command(struct gpio_v2_line_request* request, int dataCommand) {
+int set_data_command(int rq_fd, int dataCommand) {
 
     // Set initial GPIO values
     struct gpio_v2_line_values values;
@@ -239,10 +251,9 @@ int set_data_command(struct gpio_v2_line_request* request, int dataCommand) {
     else {
         values.bits = 0;
     }
-    int ret = ioctl(request->fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to set data command");
-        close(request->fd);
         return -1;
     }
 
@@ -252,17 +263,37 @@ int set_data_command(struct gpio_v2_line_request* request, int dataCommand) {
 
 
 
-int clean_gpio(struct gpio_v2_line_request* request) {
+int clean_gpio(int rq_fd) {
     
     struct gpio_v2_line_values values;
     values.mask = 3;
     values.bits = 0;
-    int ret = ioctl(request->fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to set data command");
-        close(request->fd);
         return -1;
     }
 
     return 0;
 }
+
+// returns BUSY or FREE
+int is_busy(int rq_fd) {
+    struct gpio_v2_line_values values;
+    memset(&values, 0, sizeof(values));
+    values.mask = 1<<2;
+    values.bits = 0;
+    int ret = ioctl(rq_fd, GPIO_V2_LINE_GET_VALUES_IOCTL, &values);
+    if (ret < 0) {
+        perror("Failed to check busy line");
+        return -1;
+    }
+
+    if (values.bits == 1<<2) {
+        return BUSY;
+    }
+    else return FREE;
+}
+    
+
+    
