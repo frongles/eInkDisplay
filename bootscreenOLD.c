@@ -1,5 +1,6 @@
 /** Program to open a device connected through the SPI terminal and feed some data through.
  * Fraser Crumpler
+ * With help from chatGPT
  * 12/12/2024
  * 
  */
@@ -17,7 +18,7 @@
 
 #define SPI_DEV "/dev/spidev0.0"
 #define SPI_MODE SPI_MODE_0
-#define SPI_SPEED 20000000
+#define SPI_SPEED 100
 #define SPI_BITS_PER_WORD 8
 #define GPIO_DEV "/dev/gpiochip0"
 #define DATA 1
@@ -28,161 +29,53 @@
 
 int spi_init();
 int gpio_init();
-int hardware_reset(int rq_fd);
 int write_spi(int spi_fd, uint8_t* data, int length);
-int write_command(int spi_fd, int rq_fd, uint8_t command);
-int write_data(int spi_fd, int rq_fd, uint8_t command);
 int set_data_command(int rq_fd, int dataCommand);
 int clean_gpio(int rq_fd);
 int is_busy(int rq_fd);
 int wait_busy(int rq_fd);
 
-
 int main() {
     //E ink display must be connected and have sufficient source voltage before beginning
-    
+    int ret;
     // Open relevant gpio lines
     int rq_fd = gpio_init();
     if (rq_fd < 0) {
         return -1;
     }
-
     // Open SPI device
     int spi_fd = spi_init();
     if (spi_fd < 0) {
         return -1;
     }
-
-    int ret = hardware_reset(rq_fd);
-    if (ret < 0) return -1;
-
-
+    
     // Send software reset
-    printf("software reset\n");
+    uint8_t message[10];
+    message[0] = 0x12;
+    ret = write_spi(spi_fd, message, 1);
     wait_busy(rq_fd);
-    ret = write_command(spi_fd, rq_fd, 0x12);
-    if (ret < 0) return -1;
-    wait_busy(rq_fd);
-    usleep(10 * 1000);
+    if (ret < 0) { return -1;}
 
-    // Set gate driver output control
-    printf("Gate driver output control\n");
-    ret = write_command(spi_fd, rq_fd, 0x01);
-    if (ret < 0) return -1;
-    wait_busy(rq_fd);
+    printf("Busy: %d\n", is_busy(rq_fd));
+    usleep(1000 * 10);
+    printf("Busy2: %d\n", is_busy(rq_fd));
+    // Driver gate control command
+    message[0] = 0x01;
+    ret = write_spi(spi_fd, message, 1);
+    if (ret < 0) { return -1; }
 
-    
-    printf("Write gate driver output data\n");
-    write_data(spi_fd, rq_fd, 0xF9);
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, 0x00);
-    wait_busy(rq_fd);
-    
-    // Define data entry mode sequence
-    printf("Data entry mode sequence\n");
-    write_command(spi_fd, rq_fd, 0x11);
-    wait_busy(rq_fd);
-    write_data(spi_fd, rq_fd, 0x03);
-    wait_busy(rq_fd);
-    
-    // Set ram Y address start and end
-    printf("Set RAM X address start end\n");
-    write_command(spi_fd, rq_fd, 0x44);
-    wait_busy(rq_fd);
+    // Driver gate control data
+    ret = set_data_command(rq_fd, DATA);
+    if (ret < 0) { return -1; }
+    message[0] = 0xFF;
+    message[1] = 0x01;
+    message[2] = 0x00; // 0x127, 0x00
+    ret = write_spi(spi_fd, message, 3);
+    if (ret < 0) { return -1; }
 
-    printf("Writing ram x address data\n");
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, (121 >> 3) & 0xFF);
-    wait_busy(rq_fd);
-    
-    // Set ram Y address start and end
-    printf("Set RAM Y address start end\n");    
-    write_command(spi_fd, rq_fd, 0x45);
-    wait_busy(rq_fd);
-
-    uint16_t height = 249;
-    printf("Writing ram y address data\n");
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, height & 0xFF);
-    write_data(spi_fd, rq_fd, (height >> 8) & 0xFF);
-    wait_busy(rq_fd);
-
-    // Set panel border
-    printf("Set panel border\n");
-    write_command(spi_fd, rq_fd, 0x3C);
-    write_data(spi_fd, rq_fd, 0x05);
-    wait_busy(rq_fd);
-
-    // Display update control
-    printf("display update control 1\n");
-    write_command(spi_fd, rq_fd, 0x21);
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, 0x80);
-    wait_busy(rq_fd);
-    
-    
-    // Sense temperature
-    printf("Sense temperature\n");
-    write_command(spi_fd, rq_fd, 0x18);
-    write_data(spi_fd, rq_fd, 0x80);
-    wait_busy(rq_fd);
-
-    // Display update control optioning
-    printf("Display update control options\n");
-    write_command(spi_fd, rq_fd, 0x22);
-    wait_busy(rq_fd);
-
-    write_data(spi_fd, rq_fd, 0x91);
-    wait_busy(rq_fd);
-
-
-    // Set initial X address
-    printf("Set initial X address\n");
-    write_command(spi_fd, rq_fd, 0x4E);
-    wait_busy(rq_fd);
-
-    write_data(spi_fd, rq_fd, 0x00);
-    wait_busy(rq_fd);
-
-    // Set initial Y address
-    printf("Set initial Y address\n");
-    write_command(spi_fd, rq_fd, 0x4F);
-    
-    write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, 0x00);
+    // Display ram size
     
 
-    // Write bits to display.
-    printf("Write bits to display\n");
-    write_command(spi_fd, rq_fd, 0x24);
-
-    for (int i = 0; i < (122/8); i++) {
-        for (int j = 0; j < (250 / 8); j++) {
-            write_data(spi_fd, rq_fd, 0xFF);
-        }
-    }
-    
-    // Display update control optioning
-    printf("Display update control optioning\n");
-    write_command(spi_fd, rq_fd, 0x22);
-    write_data(spi_fd, rq_fd, 0xF7);
-
-    // Master activation - activate display update sequence
-    printf("Master activation - activate display update sequence\n");
-    write_command(spi_fd, rq_fd, 0x20);
-    wait_busy(rq_fd);
-
-/*
-    // Deep sleep command
-    printf("Enter deep sleep\n");
-    write_command(spi_fd, rq_fd, 0x10);
-    wait_busy(rq_fd);
-    
-    printf("Send deep sleep data\n");
-    write_data(spi_fd, rq_fd, 0x03);
-    wait_busy(rq_fd); */
-    
     clean_gpio(rq_fd);
     close(spi_fd);
     close(rq_fd);
@@ -250,7 +143,7 @@ int gpio_init() {
     struct gpio_v2_line_attribute attribute_input;
     memset(&attribute_input, 0, sizeof(attribute_input));
     attribute_input.id = GPIO_V2_LINE_ATTR_ID_FLAGS;
-    attribute_input.flags = GPIO_V2_LINE_FLAG_INPUT;
+    attribute_input.flags = GPIO_V2_LINE_FLAG_INPUT | GPIO_V2_LINE_FLAG_ACTIVE_LOW;
 
     struct gpio_v2_line_config_attribute config_attr_output;
     memset(&config_attr_output, 0, sizeof(config_attr_output));
@@ -278,7 +171,7 @@ int gpio_init() {
      *  CLK    Clock               23          ---------------    Not user control - SPI device
      *  D/C    GPIO25 Data/Command 22          1 for data, 0 for command  Output
      *  RST    GPIO17 Reset        11          0    active low       output
-     *  BSY    GPIO24 BUSY         18          Input, Active high
+     *  BSY    BUSY                18          Input, Active high
      */
     
     // Line request info
@@ -286,7 +179,7 @@ int gpio_init() {
     memset(&request, 0, sizeof(request));
     (request.offsets)[0] = 17;
     (request.offsets)[1] = 25;
-    (request.offsets)[2] = 24;
+    (request.offsets)[2] = 18;
     strncpy(request.consumer, "LED breadboard", sizeof(request.consumer));
     request.num_lines = 3; 
     request.event_buffer_size = 0;
@@ -299,54 +192,33 @@ int gpio_init() {
         perror("gpio_init unable to get line from ioctl");
         return -1;
     }
+
+    // Set initial GPIO values
+    struct gpio_v2_line_values values;
+    values.mask = (1<<0) | (1<<1); // Activate the 0th and 1st indexes from request offsets
+    values.bits = 0x00; // Set all values to 0
+    ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    if (ret < 0) {
+        perror("Failed to set initial line values");
+        close(request.fd);
+        return -1;
+    }
+
+    sleep(1);
+    // De activeate reset signal
+    values.mask = 1<<0;
+    values.bits = 1<<0;
+    ret = ioctl(request.fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    if (ret < 0) {
+        perror("Failed to turn off reset pin");
+        close(request.fd);
+        return -1;
+    }
+
     return request.fd;
 }
 
 
-int hardware_reset(int rq_fd) {
-    
-    struct gpio_v2_line_values values;
-    
-    values.mask = 0x01;
-    values.bits = 0x01;
-    int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
-    if (ret < 0) {
-        perror("Failed to set initial line values");
-        close(rq_fd);
-        return -1;
-    }
-
-    usleep(200 * 1000);
-
-    values.mask = 0x01; // Activate the 0th and 1st indexes from request offsets
-    values.bits = 0x00;
-    ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
-    if (ret < 0) {
-        perror("Failed to set initial line values");
-        close(rq_fd);
-        return -1;
-    }
-
-
-    usleep(200 * 1000);
-
-
-
-    // De activeate reset signal - drive reset pin high
-    values.mask = 0x01;
-    values.bits = 0x01;
-    ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
-    if (ret < 0) {
-        perror("Failed to turn off reset pin");
-        close(rq_fd);
-        return -1;
-    }
-
-    usleep(20 * 1000);
-
-    return 0;
-
-}
 
 int write_spi(int spi_fd, uint8_t* commands, int length) {
     uint8_t *write = commands;
@@ -367,29 +239,6 @@ int write_spi(int spi_fd, uint8_t* commands, int length) {
     return 0;
 }
 
-int write_command(int spi_fd, int rq_fd, uint8_t command) {
-    uint8_t commands[1];
-    commands[0] = command;
-    set_data_command(rq_fd, COMMAND);
-    usleep(10 * 1000);
-
-    int ret = write_spi(spi_fd, commands, 1);
-    if (ret < 0) return -1;
-    return 0;
-}
-
-
-
-int write_data(int spi_fd, int rq_fd, uint8_t command) {
-    uint8_t commands[1];
-    commands[0] = command;
-    set_data_command(rq_fd, DATA);
-    usleep(10 * 1000);
-
-    int ret = write_spi(spi_fd, commands, 1);
-    if (ret < 0) return -1;
-    return 0;
-}
     
 
 
@@ -397,11 +246,11 @@ int set_data_command(int rq_fd, int dataCommand) {
 
     // Set initial GPIO values
     struct gpio_v2_line_values values;
-    values.mask = 2;
+    values.mask = 3;
     if(dataCommand == DATA) {
         values.bits = 2;
     }
-    else  {
+    else {
         values.bits = 0;
     }
     int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
@@ -409,7 +258,6 @@ int set_data_command(int rq_fd, int dataCommand) {
         perror("Failed to set data command");
         return -1;
     }
-    usleep(10 * 1000);
 
     return 0;
 
