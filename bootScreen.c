@@ -46,16 +46,17 @@ int main() {
     if (rq_fd < 0) {
         return -1;
     }
+    int ret = hardware_reset(rq_fd);
+
+    if (ret < 0) return -1;
+
+    usleep(500 * 1000);
 
     // Open SPI device
     int spi_fd = spi_init();
     if (spi_fd < 0) {
         return -1;
     }
-
-    int ret = hardware_reset(rq_fd);
-    if (ret < 0) return -1;
-
 
     // Send software reset
     printf("software reset\n");
@@ -157,11 +158,14 @@ int main() {
     printf("Write bits to display\n");
     write_command(spi_fd, rq_fd, 0x24);
 
-    for (int i = 0; i < (122/8); i++) {
+    for (int i = 0; i < (123); i++) {
         for (int j = 0; j < (250 / 8); j++) {
             write_data(spi_fd, rq_fd, 0xFF);
         }
+        printf("loop: %d\n", i);
     }
+
+
     
     // Display update control optioning
     printf("Display update control optioning\n");
@@ -306,20 +310,21 @@ int gpio_init() {
 int hardware_reset(int rq_fd) {
     
     struct gpio_v2_line_values values;
-    
-    values.mask = 0x01;
-    values.bits = 0x01;
-    int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    int ret;
+/*
+    values.mask = 1<<0 | 1<<0;
+    values.bits = 1<<0;
+    ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to set initial line values");
         close(rq_fd);
         return -1;
-    }
+    } */
 
-    usleep(200 * 1000);
+//    usleep(10 * 1000);
 
-    values.mask = 0x01; // Activate the 0th and 1st indexes from request offsets
-    values.bits = 0x00;
+    values.mask = 1<<0 | 1<<1; // Activate the 0th and 1st indexes from request offsets
+    values.bits = 0;
     ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to set initial line values");
@@ -328,13 +333,13 @@ int hardware_reset(int rq_fd) {
     }
 
 
-    usleep(200 * 1000);
+    usleep(10 * 1000);
 
 
 
     // De activeate reset signal - drive reset pin high
-    values.mask = 0x01;
-    values.bits = 0x01;
+    values.mask = 1<<0;
+    values.bits = 1<<0;
     ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
     if (ret < 0) {
         perror("Failed to turn off reset pin");
@@ -342,10 +347,9 @@ int hardware_reset(int rq_fd) {
         return -1;
     }
 
-    usleep(20 * 1000);
+    usleep(200 * 1000);
 
     return 0;
-
 }
 
 int write_spi(int spi_fd, uint8_t* commands, int length) {
@@ -353,10 +357,14 @@ int write_spi(int spi_fd, uint8_t* commands, int length) {
     uint8_t read[length];
     memset(read, 0, length);
     struct spi_ioc_transfer ts;
-    memset(&ts, 0, sizeof(ts));    
+    memset(&ts, 0, sizeof(ts));
     ts.tx_buf = (unsigned long)write; // Buffer to write to SPI device
     ts.rx_buf = (unsigned long)read; // Buffer to read from SPI device
-    ts.len = sizeof(write); // Temporarily change word read size from default
+    ts.len = length; // Temporarily change word read size from default
+    ts.bits_per_word = SPI_BITS_PER_WORD;
+    ts.delay_usecs = 0;
+    ts.cs_change = 0;
+    ts.word_delay_usecs = 0;
 
 
     if(ioctl(spi_fd, SPI_IOC_MESSAGE(1), &ts) < 0) {
@@ -368,10 +376,10 @@ int write_spi(int spi_fd, uint8_t* commands, int length) {
 }
 
 int write_command(int spi_fd, int rq_fd, uint8_t command) {
-    uint8_t commands[1];
+    uint8_t commands[10];
     commands[0] = command;
     set_data_command(rq_fd, COMMAND);
-    usleep(10 * 1000);
+//    usleep(10 * 1000);
 
     int ret = write_spi(spi_fd, commands, 1);
     if (ret < 0) return -1;
@@ -381,10 +389,9 @@ int write_command(int spi_fd, int rq_fd, uint8_t command) {
 
 
 int write_data(int spi_fd, int rq_fd, uint8_t command) {
-    uint8_t commands[1];
+    uint8_t commands[10];
     commands[0] = command;
     set_data_command(rq_fd, DATA);
-    usleep(10 * 1000);
 
     int ret = write_spi(spi_fd, commands, 1);
     if (ret < 0) return -1;
@@ -409,7 +416,7 @@ int set_data_command(int rq_fd, int dataCommand) {
         perror("Failed to set data command");
         return -1;
     }
-    usleep(10 * 1000);
+//    usleep(10 * 1000);
 
     return 0;
 
@@ -460,7 +467,7 @@ int wait_busy(int rq_fd) {
             printf("Error: wait for busy pin timeout\n");
             return -1;
         }
-        sleep(1);
+        usleep(500 * 1000);
     }
 
     return 0;
