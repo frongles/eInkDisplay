@@ -1,4 +1,4 @@
-/** Program to open a device connected through the SPI terminal and feed some data through.
+/** Tools for writing to e-Ink display
  * Fraser Crumpler
  * 12/12/2024
  * 
