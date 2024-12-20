@@ -18,6 +18,7 @@
 #define SPI_DEV "/dev/spidev0.0"
 #define SPI_MODE SPI_MODE_0
 #define SPI_SPEED 20000000
+
 #define SPI_BITS_PER_WORD 8
 #define GPIO_DEV "/dev/gpiochip0"
 #define DATA 1
@@ -50,7 +51,7 @@ int main() {
 
     if (ret < 0) return -1;
 
-    usleep(500 * 1000);
+    usleep(10 * 1000);
 
     // Open SPI device
     int spi_fd = spi_init();
@@ -93,7 +94,7 @@ int main() {
 
     printf("Writing ram x address data\n");
     write_data(spi_fd, rq_fd, 0x00);
-    write_data(spi_fd, rq_fd, (121 >> 3) & 0xFF);
+    write_data(spi_fd, rq_fd, (120 >> 3) & 0xFF);
     wait_busy(rq_fd);
     
     // Set ram Y address start and end
@@ -158,11 +159,17 @@ int main() {
     printf("Write bits to display\n");
     write_command(spi_fd, rq_fd, 0x24);
 
-    for (int i = 0; i < (123); i++) {
-        for (int j = 0; j < (250 / 8); j++) {
-            write_data(spi_fd, rq_fd, 0xFF);
+
+    for (int i = 0; i < 250; i++) {
+        for (int j = 0; j < 16; j++) {
+            if (i % 16) {
+                write_data(spi_fd, rq_fd, 0xFF);
+            }
+            else {
+                write_data(spi_fd, rq_fd, 0x00);
+            }
+
         }
-        printf("loop: %d\n", i);
     }
 
 
@@ -347,7 +354,7 @@ int hardware_reset(int rq_fd) {
         return -1;
     }
 
-    usleep(200 * 1000);
+    usleep(20 * 1000);
 
     return 0;
 }
