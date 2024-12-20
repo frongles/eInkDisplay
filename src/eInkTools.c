@@ -359,6 +359,7 @@ int hardware_reset(int rq_fd) {
     return 0;
 }
 
+
 int write_spi(int spi_fd, uint8_t* commands, int length) {
     uint8_t *write = commands;
     uint8_t read[length];
@@ -394,7 +395,7 @@ int write_command(int spi_fd, int rq_fd, uint8_t command) {
 }
 
 
-
+// Writes a byte as data to the SPI stream
 int write_data(int spi_fd, int rq_fd, uint8_t command) {
     uint8_t commands[10];
     commands[0] = command;
@@ -406,7 +407,7 @@ int write_data(int spi_fd, int rq_fd, uint8_t command) {
 }
     
 
-
+// Sets the D/C# pin to 1 for DATA and 0 for COMMAND
 int set_data_command(int rq_fd, int dataCommand) {
 
     // Set initial GPIO values
@@ -423,14 +424,13 @@ int set_data_command(int rq_fd, int dataCommand) {
         perror("Failed to set data command");
         return -1;
     }
-//    usleep(10 * 1000);
 
     return 0;
 
 }
 
 
-
+// Sets used gpio pins to 0
 int clean_gpio(int rq_fd) {
     
     struct gpio_v2_line_values values;
@@ -445,7 +445,7 @@ int clean_gpio(int rq_fd) {
     return 0;
 }
 
-// returns BUSY or FREE
+// Checks whether the busy pin is BUSY or FREE
 int is_busy(int rq_fd) {
     struct gpio_v2_line_values values;
     memset(&values, 0, sizeof(values));
@@ -462,9 +462,9 @@ int is_busy(int rq_fd) {
     }
     else return FREE;
 }
-    
 
-    
+
+// Waits until the busy pin is FREE
 int wait_busy(int rq_fd) {
     int count = 0;
     while (is_busy(rq_fd) == BUSY) {
