@@ -7,17 +7,18 @@
 #include <linux/types.h>
 #include <linux/gpio.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdint.h>
 
 #include "../include/gpioTools.h"
 
-static int line_rq = -1;
+static int rq_fd = -1;
 
 // Connect to GPIO device, activates reset signal and configures for writing command.
 int gpio_init() {
 
     // Open gpio device
-    gpio_fd = open(GPIO_DEV, O_RDONLY);
+    int gpio_fd = open(GPIO_DEV, O_RDONLY);
     if (gpio_fd < 0) {
         perror("gpio_init unable to open gpio device");
 	return -1;

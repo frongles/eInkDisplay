@@ -3,17 +3,23 @@
 CC = gcc
 CFLAGS = -Wall -g
 
+SRC_PATH = src
+OBJ_PATH = obj
+BIN_PATH = bin
+
 TARGET_NAME := testDisplay
+SRC_NAMES = testDisplay eInkTools spiTools gpioTools
 
-TARGET := bin/$(TARGET_NAME)
+SRC = $(addprefix $(SRC_PATH)/, $(addsuffix .c, $(SRC_NAMES)))
+OBJ = $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(SRC_NAMES)))
+TARGET := $(BIN_PATH)/$(TARGET_NAME)
 
-all: bin/TARGET
-TARGET: bin/TARGET
+all: $(TARGET)
 
-bin/TARGET: obj/TARGET.o
+$(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
-obj/%.o: src/%.c
+$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 	$(CC) $(CFLAGS) -o $@ -c $^
 
 

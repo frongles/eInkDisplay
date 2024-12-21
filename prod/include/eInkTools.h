@@ -2,7 +2,7 @@
 #define EINKTOOLS
 
 #define HEIGHT 250
-#define WIDTH 120
+#define WIDTH 122
 #include <stdint.h>
 
 int write_command(uint8_t command);
@@ -11,7 +11,7 @@ int init_display();
 int activate_display();
 int clear_display();
 int pattern_display();
-int sleep();
+int sleep_display();
 int cleanup();
 
 

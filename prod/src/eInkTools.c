@@ -6,14 +6,11 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "../include/eInkTools.h"
 #include "../include/gpioTools.h"
 #include "../include/spiTools.h"
-
-#define HEIGHT 250
-#define WIDTH 120
-
 
 // Writes a byte as a command to the display
 int write_command(uint8_t command) {
@@ -47,6 +44,7 @@ int init_display() {
     hardware_reset();
 
     write_command(0x12); // SW reset
+    usleep(10 * 1000);
     wait_busy();
 
     write_command(0x01); // Driver output control
@@ -59,13 +57,13 @@ int init_display() {
 
     write_command(0x44); // X RAM
     write_data(0x00);
-    write_data((WIDTH >> 3) & 0xFF);
+    write_data(((WIDTH - 1) >> 3) & 0xFF);
 
     write_command(0x45); // Y RAM
     write_data(0x00);
     write_data(0x00);
-    write_data(HEIGHT & 0xFF);
-    write_data((HEIGHT >> 8) & 0xFF);
+    write_data((HEIGHT- 1) & 0xFF);
+    write_data(((HEIGHT - 1) >> 8) & 0xFF);
 
     write_command(0x4E); // Initial X
     write_data(0x00);
@@ -99,12 +97,13 @@ int activate_display() {
 
     write_command(0x20); // Activate display update sequence
     wait_busy();
+    return 0;
 }
 
 int clear_display() {
     write_command(0x24);
     for (int i = 0; i < HEIGHT; i++) {
-        for (int j = 0; j < WIDTH / 8; j++) {
+        for (int j = 0; j < (WIDTH + 8) / 8; j++) {
             write_data(0xFF);
         }
     }
@@ -117,15 +116,20 @@ int clear_display() {
 int pattern_display() {
     write_command(0x24);
     for (int i = 0; i < HEIGHT; i++) {
-        for (int j = 0; j < WIDTH / 8; j++) {
-            if ((i % 16 || (i + 1) %16) == 0) {
+        for (int j = 0; j < (WIDTH + 8 ) / 8; j++) {
+            if ((i % 16 == 0) || ((i + 1) % 16 == 0)) {
                 write_data(0xFF);
+            }
+            else {
+                write_data(0x00);
             }
         }
     }
+    activate_display();
+    return 0;
 }
 
-int sleep() {
+int sleep_display() {
     write_command(0x10);
     write_data(0x03);
     return 0;
@@ -133,7 +137,7 @@ int sleep() {
 
 int cleanup() {
     clear_display();
-    sleep();
+    sleep_display();
     clean_gpio();
     return 0;
 }
