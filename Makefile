@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-TARGET_NAME := # 
+TARGET_NAME := testDisplay
 
 TARGET := bin/$(TARGET_NAME)
 

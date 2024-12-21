@@ -10,7 +10,9 @@ int write_data(uint8_t data);
 int init_display();
 int activate_display();
 int clear_display();
+int pattern_display();
 int sleep();
+int cleanup();
 
 
 #endif
