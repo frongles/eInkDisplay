@@ -4,5 +4,5 @@
 .vscode*
 *~
 extern/
-prod/bin/
-prod/obj/
+prod/bin/*
+prod/obj/*

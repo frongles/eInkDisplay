@@ -17,8 +17,9 @@ int main(void) {
     sleep(3);
     printf("clearing display\n");
     clear_display();
-    sleep(3);
     printf("display cleared\n");
+    sleep(3);
     cleanup();
+    
     return 0;
 }

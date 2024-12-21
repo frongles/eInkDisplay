@@ -138,6 +138,6 @@ int sleep_display() {
 int cleanup() {
     clear_display();
     sleep_display();
-    clean_gpio();
+    //clean_gpio();
     return 0;
 }
