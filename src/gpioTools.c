@@ -11,16 +11,7 @@
 
 #include "../include/gpioTools.h"
 
-
-
-#define GPIO_DEV "/dev/gpiochip0"
-#define DATA 1
-#define COMMAND 0
-#define BUSY 0
-#define FREE 1
-
 static int line_rq = -1;
-
 
 // Connect to GPIO device, activates reset signal and configures for writing command.
 int gpio_init() {
@@ -177,4 +168,27 @@ int wait_busy() {
     }
 
     return 0;
+}
+
+
+// Sets the D/C# pin to 1 for DATA and 0 for COMMAND
+int set_data_command(int dataCommand) {
+
+    // Set initial GPIO values
+    struct gpio_v2_line_values values;
+    values.mask = 2;
+    if(dataCommand == DATA) {
+        values.bits = 2;
+    }
+    else  {
+        values.bits = 0;
+    }
+    int ret = ioctl(rq_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values);
+    if (ret < 0) {
+        perror("Failed to set data command");
+        return -1;
+    }
+
+    return 0;
+
 }
