@@ -1,5 +1,8 @@
 *.o
 .DS_Store
 .idea*
+.vscode*
 *~
 extern/
+prod/bin/
+prod/obj/
