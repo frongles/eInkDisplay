@@ -172,90 +172,24 @@ int write_letter(char* font, int fontsize, int x, int y, int character) {
     stbtt_InitFont(&font, data, 0);
     float scale = stbtt_ScaleForPixelHeight(&font, fontsize);
     int width, height, xoff, yoff;
-    unsigned char* intensityBitmap = stbtt_GetCodepointBitmap(&font, scale, scale, character, &width, &height, &xoff, &yoff);
-
-    // Datamap width is the number of bits / 8 rounded up, in bytes
-    int byte_width;
-    if (width % 8 == 0) byte_width = width / 8;
-    else byte_width = (width + 8) / 8;
-
-    uint8_t* bitmap[height][byte_width];
+    unsigned char* bitmap = stbtt_GetCodepointBitmap(&font, scale, scale, character, &width, &height, &xoff, &yoff);
 
     // Convert the font byte map, to a bit map compatible with the e-ink display
     // i.e. an array of bytes whose bits correspond to active or inactive pixels
     for (int j = 0; j < height; j++) {
-        uint8_t bits = 0x00;
         for (int i = 0; i < width; i++) {
-
-            // After shifting 8 bits, write to the data map, and reset
-            if (i % 8 == 0 && i != 0) {
-                bitmap[j][i / 8 - 1] = bits;
-                bits = 0x00;
+            if (bitmap[j * width + i] > 255/2) {
+                write_pixel(x + i, y + j);
             }
-            
-            // Add a white pixel to the bits if the intensity is less than half
-            if (intensityBitmap[j * width + i] < 255/2) {
-                bits += 1; 
-            }
-            bits << 1;
         }
-        // At the end of every row, pad the right side of the last byte with white pixels
-        int padding = 8 - width % 8;
-        bits = bits << padding | 0xFF >> (width % 8); // shift bits to left align, and fill the end with white
-        bitmap[j][byte_width - 1] = bits;
-    }
 
-    x = x + xoff;
-    y = y + yoff;
-    // To do - might need to swap X and Y since the display X is the short direction. 
-    // Also want to convert all this entries to entering into the big data array instead.
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < byte_width; i++) {
-            write_data(bitmap[j][i]);
-            display[j + y][i + x] = bitmap[j][i];
-        }
     }
 
     return 0;
 }
 
-
-/*
-    An example to visualise converting from a map of bytes to a map of bits
-
-    X X 0       two bytes (of any intensity), then 
-    X 0 X
-    0 0 X
-
-    [1100 000]
-    [1010 000]
-    [0010 000]
-
-    width of 3 => ceil(3/8)
-    height of 3 => 3
-
-    pseudocode
-
-
-    foreach byte {
-        uint8_t bits = 0;
-        for ( int i = 0; i < 8; i++) {
-            if (byte intensity > 50%) {
-                bits += 1;
-            }
-            bits = bits << 1;
-        }
-        outputbitmap[byte] = bits;
-    }
-    outputbitmap[lastbyte] = outputbitmap[lastbyte] << (8 - width % 8) // pads the last bit with white space at the end
-    // 
-
-
-
-*/
-
 // Write pixel function from jim crumpler
-int write_pixel(uint8_t x, uint8_t y) {
+int write_pixel(int x, int y) {
     int byteX = x / 8;
     int byteY = y / 8;
     int bit_position = 7 - x % 8;
