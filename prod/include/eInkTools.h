@@ -7,6 +7,7 @@
 
 #define HEIGHT 250 // in pixels
 #define WIDTH 122 // in pixels
+#define MONACO "../fonts/Monaco.ttf"
 
 // Initialise the display
 // This must be run first
