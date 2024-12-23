@@ -10,6 +10,7 @@
 // Font paths
 #define MONACO "/home/frasercrumpler/projects/prod/fonts/Monaco.ttf"
 #define QABEXEL "/home/frasercrumpler/projects/prod/fonts/Qabaxel-2v3el.ttf"
+#define UNIFONT "/home/frasercrumpler/projects/prod/fonts/UnifontExMono.ttf"
 
 #define HEIGHT 250 // in pixels
 #define WIDTH 122 // in pixels
@@ -47,6 +48,8 @@ int sleep_display();
 int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character);
 
 int write_string(char* font, int fontsize, int x, int y, char* string);
+
+int write_unicode(char* font, int fontsize, int x, int y, int* array);
 
 // Writes a pixel to the display ram at the coords
 int write_pixel(int colour, int x, int y);

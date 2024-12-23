@@ -215,7 +215,34 @@ int write_pixel(int colour, int x, int y) {
 int write_string(char* font, int fontsize, int x, int y, char* string) {
     int width = 0, height = 0, length = 0;
     for(int i = 0; string[i] != '\0'; i++) {
+        if (string[i] == ' ') {
+            length += width;
+            continue;
+        }
+        if (string[i] == '\n') {
+            length = 0;
+            x = x + height;
+            continue;
+        }
         write_char(font, fontsize, x, y + length, &width, &height, string[i]);
+        length += width;
+    }
+    return 0;
+}
+
+int write_unicode(char* font, int fontsize, int x, int y, int* array) {
+    int width = 0, height = 0, length = 0;
+    for(int i = 0; array[i] != '\0'; i++) {
+        if (array[i] == ' ') {
+            length += width;
+            continue;
+        }
+        if (array[i] == '\n') {
+            length = 0;
+            x = x + height;
+            continue;
+        }
+        write_char(font, fontsize, x, y + length, &width, &height, array[i]);
         length += width;
     }
     return 0;
