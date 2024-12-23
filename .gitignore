@@ -6,3 +6,4 @@
 extern/
 prod/bin/*
 prod/obj/*
+prod/fonts/*

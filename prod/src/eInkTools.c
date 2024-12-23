@@ -6,8 +6,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include <math.h>
+#include <assert.h>
 
 #include "../include/stb_truetype.h"
 #include "../include/eInkTools.h"
@@ -149,8 +150,8 @@ int cleanup() {
     sleep_display();
     return 0;
 }
-/*
-int write_char(char* font, int fontsize, int x, int y, int character) {
+
+int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character) {
 
     // Get font file and filesize
     FILE *file = fopen(font, "r");
@@ -170,18 +171,17 @@ int write_char(char* font, int fontsize, int x, int y, int character) {
     stbtt_fontinfo fontInfo;
     stbtt_InitFont(&fontInfo, data, 0);
     float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontsize);
-    int width, height, xoff, yoff;
-    unsigned char* bitmap = stbtt_GetCodepointBitmap(&fontInfo, scale, scale, character, &width, &height, &xoff, &yoff);
+    int xoff, yoff;
+    unsigned char* bitmap = stbtt_GetCodepointBitmap(&fontInfo, scale, scale, character, width, height, &xoff, &yoff);
 
-
-    x = x + xoff;
-    y = y + yoff;
+    x = x - yoff;
+    y = y + xoff;
     // Convert the font byte map, to a bit map compatible with the e-ink display
     // i.e. an array of bytes whose bits correspond to active or inactive pixels
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            if (bitmap[j * width + i] > 255/2) {
-                write_pixel(x + i, y + j);
+    for (int j = 0; j < *height; j++) {
+        for (int i = 0; i < *width; i++) {
+            if (bitmap[j * *width + i] > (255 * 0.5)) {
+                write_pixel(BLACK, x - j, y + i);
             }
         }
 
@@ -190,16 +190,45 @@ int write_char(char* font, int fontsize, int x, int y, int character) {
 
     return 0;
 }
-*/
+
 
 // Write pixel function from jim crumpler
-int write_pixel(int x, int y) {
+// Takes a 1 or a 0 as a value
+int write_pixel(int colour, int x, int y) {
     int byteX = x / 8;
     int byteY = y;
     int bit_position = 7 - x % 8;
 
     uint8_t value = display[byteY][byteX];
-    value = value & ~(1<<bit_position);
+    if (colour == BLACK) {
+        value = value & ~(1<<bit_position);
+    }
+    else if (colour == WHITE) {
+        value = value | (1<<bit_position);
+    }
     display[byteY][byteX] = value;
+    return 0;
+}
+
+int write_string(char* font, int fontsize, int x, int y, char* string) {
+    int width = 0, height = 0, length = 0;
+    for(int i = 0; string[i] != '\0'; i++) {
+        write_char(font, fontsize, x, y + length, &width, &height, string[i]);
+        length += width;
+    }
+    return 0;
+}
+
+int display_grid() {
+    for (int i = 0; i < WIDTH; i++) {
+        for (int j = 0; j < HEIGHT; j++) {
+            if (i % 32 == 0) {
+                write_pixel(BLACK, i, j);
+            }
+            if (j % 32 == 0) {
+                write_pixel(BLACK, i, j);
+            }
+        }
+    }
     return 0;
 }

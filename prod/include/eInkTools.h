@@ -9,7 +9,11 @@
 
 #define HEIGHT 250 // in pixels
 #define WIDTH 122 // in pixels
-#define MONACO "../fonts/Monaco.ttf"
+#define WHITE 1
+#define BLACK 0
+#define MONACO "/home/frasercrumpler/projects/prod/fonts/Monaco.ttf"
+#define BLOCK "/home/frasercrumpler/projects/prod/fonts/BlockMerged-RnjW.ttf"
+#define QABEXEL "/home/frasercrumpler/projects/prod/fonts/Qabaxel-2v3el.ttf"
 
 // Initialise the display
 // This must be run first
@@ -38,12 +42,17 @@ int sleep_display();
 // Writes a character to the display ram with the specified font, fontsize, and x y coords.
 // char* font => file path to the .ttf font file to be used.
 // Currently no support for .ttc font file collections.
-int write_char(char* font, int fontsize, int x, int y, int character);
+int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character);
+
+int write_string(char* font, int fontsize, int x, int y, char* string);
 
 // Writes a pixel to the display ram at the coords
-int write_pixel(int x, int y);
+int write_pixel(int colour, int x, int y);
 
 // Clear the screen and put to sleep for storage/unplugging the device
 int cleanup();
+
+// Displays a 32x32 pixel grid on the display
+int display_grid();
 
 #endif
