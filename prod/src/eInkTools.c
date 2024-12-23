@@ -140,6 +140,8 @@ int pattern_display() {
 }
 
 int sleep_display() {
+    write_string(QABEXEL, 10, 3, 0, "sleep");
+    activate_display();
     write_command(0x10);
     write_data(0x03);
     return 0;

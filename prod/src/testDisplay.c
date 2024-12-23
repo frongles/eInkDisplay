@@ -12,7 +12,7 @@ int main(void) {
     init_display();
     clear_display();
 
-    write_string(QABEXEL, 64, 64, 32, "hello");
+    write_string(QABEXEL, 64, 64, 32, "Hello");
         
     display_grid();
 
@@ -20,6 +20,5 @@ int main(void) {
     printf("character displayed\n");
 
     sleep_display();
-
     return 0;
 }

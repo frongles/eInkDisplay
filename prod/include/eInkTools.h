@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 
+// Font paths
+#define MONACO "/home/frasercrumpler/projects/prod/fonts/Monaco.ttf"
+#define QABEXEL "/home/frasercrumpler/projects/prod/fonts/Qabaxel-2v3el.ttf"
+
 #define HEIGHT 250 // in pixels
 #define WIDTH 122 // in pixels
 #define WHITE 1
