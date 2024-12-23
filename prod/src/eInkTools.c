@@ -7,10 +7,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <math.h>
 
-#define STB_TRUETYPE_IMPLEMENTATION
 #include "../include/stb_truetype.h"
-
 #include "../include/eInkTools.h"
 #include "../include/gpioTools.h"
 #include "../include/spiTools.h"
@@ -148,19 +147,19 @@ int sleep_display() {
 int cleanup() {
     clear_display();
     sleep_display();
-    //clean_gpio();
     return 0;
 }
-
-int write_letter(char* font, int fontsize, int x, int y, int character) {
+/*
+int write_char(char* font, int fontsize, int x, int y, int character) {
 
     // Get font file and filesize
     FILE *file = fopen(font, "r");
+    assert(file != NULL);
     fseek(file, 0, SEEK_END);
     int file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    const unsigned char *data = malloc(file_size);
+    unsigned char *data = malloc(file_size);
     fread(data, file_size, 1, file);
     fclose(file);
     
@@ -168,12 +167,15 @@ int write_letter(char* font, int fontsize, int x, int y, int character) {
     // The font map comes in bytes. The byte location in the sequence corresponds to the pixel, 
     // with the top left corner being the start. The byte's intensity corresponds to the brightness of the 
     // pixel.
-    stbtt_fontinfo font;
-    stbtt_InitFont(&font, data, 0);
-    float scale = stbtt_ScaleForPixelHeight(&font, fontsize);
+    stbtt_fontinfo fontInfo;
+    stbtt_InitFont(&fontInfo, data, 0);
+    float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontsize);
     int width, height, xoff, yoff;
-    unsigned char* bitmap = stbtt_GetCodepointBitmap(&font, scale, scale, character, &width, &height, &xoff, &yoff);
+    unsigned char* bitmap = stbtt_GetCodepointBitmap(&fontInfo, scale, scale, character, &width, &height, &xoff, &yoff);
 
+
+    x = x + xoff;
+    y = y + yoff;
     // Convert the font byte map, to a bit map compatible with the e-ink display
     // i.e. an array of bytes whose bits correspond to active or inactive pixels
     for (int j = 0; j < height; j++) {
@@ -184,18 +186,20 @@ int write_letter(char* font, int fontsize, int x, int y, int character) {
         }
 
     }
+    free(data);
 
     return 0;
 }
+*/
 
 // Write pixel function from jim crumpler
 int write_pixel(int x, int y) {
     int byteX = x / 8;
-    int byteY = y / 8;
+    int byteY = y;
     int bit_position = 7 - x % 8;
 
     uint8_t value = display[byteY][byteX];
-    value = value & !(1<<bit_position);
+    value = value & ~(1<<bit_position);
     display[byteY][byteX] = value;
     return 0;
 }

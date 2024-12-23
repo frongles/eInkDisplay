@@ -5,6 +5,8 @@
 #ifndef EINKTOOLS
 #define EINKTOOLS
 
+#include <stdint.h>
+
 #define HEIGHT 250 // in pixels
 #define WIDTH 122 // in pixels
 #define MONACO "../fonts/Monaco.ttf"
@@ -32,6 +34,14 @@ int pattern_display();
 // Put the display to sleep - low power mode
 // The display should be left in sleep mode when not in use
 int sleep_display();
+
+// Writes a character to the display ram with the specified font, fontsize, and x y coords.
+// char* font => file path to the .ttf font file to be used.
+// Currently no support for .ttc font file collections.
+int write_char(char* font, int fontsize, int x, int y, int character);
+
+// Writes a pixel to the display ram at the coords
+int write_pixel(int x, int y);
 
 // Clear the screen and put to sleep for storage/unplugging the device
 int cleanup();

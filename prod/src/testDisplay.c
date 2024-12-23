@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+
 #include "../include/eInkTools.h"
 
 int main(void) {
@@ -12,7 +13,9 @@ int main(void) {
     printf("display cleared\n");
     sleep(3);
     printf("about to pattern display\n");
-    pattern_display();
+
+
+    activate_display();
     printf("pattern displayed\n");
     sleep(3);
     printf("clearing display\n");
