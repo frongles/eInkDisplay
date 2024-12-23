@@ -11,9 +11,7 @@
 #define WIDTH 122 // in pixels
 #define WHITE 1
 #define BLACK 0
-#define MONACO "/home/frasercrumpler/projects/prod/fonts/Monaco.ttf"
-#define BLOCK "/home/frasercrumpler/projects/prod/fonts/BlockMerged-RnjW.ttf"
-#define QABEXEL "/home/frasercrumpler/projects/prod/fonts/Qabaxel-2v3el.ttf"
+
 
 // Initialise the display
 // This must be run first
