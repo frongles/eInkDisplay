@@ -8,7 +8,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wchar.h>
+#include <string.h>
 #include <assert.h>
+#include <locale.h>
+
 
 #include "../include/stb_truetype.h"
 #include "../include/eInkTools.h"
@@ -140,7 +144,7 @@ int pattern_display() {
 }
 
 int sleep_display() {
-    write_string(QABEXEL, 10, 3, 0, "sleep");
+    //write_string(QABEXEL, 10, 3, 0, "sleep");
     activate_display();
     write_command(0x10);
     write_data(0x03);
@@ -188,6 +192,7 @@ int write_char(char* font, int fontsize, int x, int y, int *width, int *height, 
         }
 
     }
+    printf("Write char %lc with width %d\n", character, *width);
     free(data);
 
     return 0;
@@ -213,51 +218,68 @@ int write_pixel(int colour, int x, int y) {
 }
 
 int write_string(char* font, int fontsize, int x, int y, char* string) {
+
+    const char* const_str = string;
+    wchar_t dst[100];
+    mbstate_t state;
+    memset(&state, 0, sizeof(mbstate_t));
+    size_t size = mbsrtowcs(dst, &const_str, 100, &state);
+    if (size == (size_t)-1) {
+        perror("Error in mbsrtowcs read: ");
+        exit(1);
+    }
     int width = 0, height = 0, length = 0;
-    for(int i = 0; string[i] != '\0'; i++) {
-        if (string[i] == ' ') {
-            length += width;
+    for(int i = 0; i < size; i++) {
+        
+        if (dst[i] == L' ') {
+            length += fontsize / 2;
+            printf("found a whitespace\n");
             continue;
         }
-        if (string[i] == '\n') {
+        if (dst[i] == L'\n') {
             length = 0;
             x = x + height;
             continue;
         }
-        write_char(font, fontsize, x, y + length, &width, &height, string[i]);
-        length += width;
+        write_char(font, fontsize, x, y + length, &width, &height, dst[i]);
+//        display_line_X(y + length);
+        length += width + fontsize / 10;
     }
     return 0;
 }
 
-int write_unicode(char* font, int fontsize, int x, int y, int* array) {
-    int width = 0, height = 0, length = 0;
-    for(int i = 0; array[i] != '\0'; i++) {
-        if (array[i] == ' ') {
-            length += width;
-            continue;
-        }
-        if (array[i] == '\n') {
-            length = 0;
-            x = x + height;
-            continue;
-        }
-        write_char(font, fontsize, x, y + length, &width, &height, array[i]);
-        length += width;
-    }
-    return 0;
-}
 
-int display_grid() {
+int display_grid(int pixels_per_square) {
+
     for (int i = 0; i < WIDTH; i++) {
         for (int j = 0; j < HEIGHT; j++) {
-            if (i % 32 == 0) {
+            if (i % pixels_per_square == 0) {
                 write_pixel(BLACK, i, j);
             }
-            if (j % 32 == 0) {
+            if (j % pixels_per_square == 0) {
                 write_pixel(BLACK, i, j);
             }
         }
     }
+    return 0;
+}
+
+int display_line_X(int y) {
+    for (int i = 0; i < WIDTH; i++) {
+        write_pixel(BLACK, i, y);
+    }
+    return 0;
+}
+
+int display_line_Y(int x) {
+    for (int i = 0; i < HEIGHT; i++) {
+        write_pixel(BLACK, x, i);
+    }
+    return 0;
+}
+
+int display_cross(int x, int y) {
+    display_line_X(y);
+    display_line_Y(x);
     return 0;
 }

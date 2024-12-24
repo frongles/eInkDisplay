@@ -1,19 +1,23 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <wchar.h>
+#include <locale.h>
 
 #include "../include/eInkTools.h"
 
 int main(void) {
     init_display();
     clear_display();
+    setlocale(LC_ALL, "");
 
-    wchar_t ch = L'は';
-    printf("%d\n", ch);
+    //display_grid(8);
+    write_string(UNIFONT, 32, 32, 16, "こんにちは、世界");
+    write_string(UNIFONT, 32, 64, 16, "Hello, World!");
 
-    int array[] = {0x3A3, 0xA67, 0x28, 0x275B, ' ', 0x25A1, 0x275B, ' ', 0x273F, 0x29, '\0'};
-    write_unicode(UNIFONT, 32, 122/2, 32, array);
+//    int width, height;
+//    write_char(UNIFONT, 32, 32, 32, &width, &height, 0x306F);
 
+//    display_cross(32, 32);
 
     
     //write_string(UNIFONT, 16, 64, 32, "Σ੧(❛□❛✿)");

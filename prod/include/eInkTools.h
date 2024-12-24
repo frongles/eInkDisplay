@@ -47,9 +47,7 @@ int sleep_display();
 // Currently no support for .ttc font file collections.
 int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character);
 
-int write_string(char* font, int fontsize, int x, int y, char* string);
-
-int write_unicode(char* font, int fontsize, int x, int y, int* array);
+int write_string(char* font, int fontsize, int x, int y, char*string);
 
 // Writes a pixel to the display ram at the coords
 int write_pixel(int colour, int x, int y);
@@ -59,5 +57,11 @@ int cleanup();
 
 // Displays a 32x32 pixel grid on the display
 int display_grid();
+
+int display_line_X(int y);
+
+int display_line_Y(int x);
+
+int display_cross(int x, int y);
 
 #endif
