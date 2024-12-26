@@ -144,7 +144,7 @@ int pattern_display() {
 }
 
 int sleep_display() {
-    //write_string(QABEXEL, 10, 3, 0, "sleep");
+    write_string(QABEXEL, 10, 3, 0, "sleep");
     activate_display();
     write_command(0x10);
     write_data(0x03);
@@ -192,7 +192,9 @@ int write_char(char* font, int fontsize, int x, int y, int *width, int *height, 
         }
 
     }
-    printf("Write char %lc with width %d\n", character, *width);
+    // Fill the width with the advance width of the character...
+    int leftSideBearing;
+    stbtt_GetCodepointHMetrics(&fontInfo, character, width, &leftSideBearing);
     free(data);
 
     return 0;
@@ -233,7 +235,6 @@ int write_string(char* font, int fontsize, int x, int y, char* string) {
         
         if (dst[i] == L' ') {
             length += fontsize / 2;
-            printf("found a whitespace\n");
             continue;
         }
         if (dst[i] == L'\n') {
@@ -243,7 +244,7 @@ int write_string(char* font, int fontsize, int x, int y, char* string) {
         }
         write_char(font, fontsize, x, y + length, &width, &height, dst[i]);
 //        display_line_X(y + length);
-        length += width + fontsize / 10;
+        length += width;
     }
     return 0;
 }
