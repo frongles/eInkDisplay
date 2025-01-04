@@ -144,7 +144,7 @@ int pattern_display() {
 }
 
 int sleep_display() {
-    write_string(QABEXEL, 10, 3, 0, "sleep");
+    //write_string(QABEXEL, 10, 3, 0, "sleep");
     activate_display();
     write_command(0x10);
     write_data(0x03);
@@ -157,8 +157,7 @@ int cleanup() {
     return 0;
 }
 
-int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character) {
-
+stbtt_fontinfo* init_font(char* font, int fontsize) {
     // Get font file and filesize
     FILE *file = fopen(font, "r");
     assert(file != NULL);
@@ -174,18 +173,31 @@ int write_char(char* font, int fontsize, int x, int y, int *width, int *height, 
     // The font map comes in bytes. The byte location in the sequence corresponds to the pixel, 
     // with the top left corner being the start. The byte's intensity corresponds to the brightness of the 
     // pixel.
-    stbtt_fontinfo fontInfo;
-    stbtt_InitFont(&fontInfo, data, 0);
-    float scale = stbtt_ScaleForPixelHeight(&fontInfo, fontsize);
-    int xoff, yoff;
-    unsigned char* bitmap = stbtt_GetCodepointBitmap(&fontInfo, scale, scale, character, width, height, &xoff, &yoff);
+    stbtt_fontinfo *fontInfo = malloc(sizeof(stbtt_fontinfo));
+    if (stbtt_InitFont(fontInfo, data, 0) == 0) {
+        printf("failed to initialise font...\n");
+        exit(1);
+    }
+    
+    stbtt_ScaleForPixelHeight(fontInfo, 32);
+    //free(data);
+    return fontInfo;
+}
 
+
+int write_char(stbtt_fontinfo *fontInfo, int fontsize, int x, int y, int *width, int *height, int character) {
+    float scale = stbtt_ScaleForPixelHeight(fontInfo, fontsize);
+    int xoff, yoff;
+    *width = 0;
+    *height = 0;
+    unsigned char* bitmap = stbtt_GetCodepointBitmap(fontInfo, scale, scale, character, width, height, &xoff, &yoff);
     x = x - yoff;
     y = y + xoff;
     // Convert the font byte map, to a bit map compatible with the e-ink display
     // i.e. an array of bytes whose bits correspond to active or inactive pixels
     for (int j = 0; j < *height; j++) {
         for (int i = 0; i < *width; i++) {
+
             if (bitmap[j * *width + i] > (255 * 0.5)) {
                 write_pixel(BLACK, x - j, y + i);
             }
@@ -193,10 +205,9 @@ int write_char(char* font, int fontsize, int x, int y, int *width, int *height, 
 
     }
     // Fill the width with the advance width of the character...
-    int leftSideBearing;
-    stbtt_GetCodepointHMetrics(&fontInfo, character, width, &leftSideBearing);
-    free(data);
-
+    int leftSideBearing, advanceWidth;
+    stbtt_GetCodepointHMetrics(fontInfo, character, &advanceWidth, &leftSideBearing);
+    *width = (int)(advanceWidth * scale);
     return 0;
 }
 
@@ -207,6 +218,10 @@ int write_pixel(int colour, int x, int y) {
     int byteX = x / 8;
     int byteY = y;
     int bit_position = 7 - x % 8;
+
+    if (byteX > WIDTH || byteY > HEIGHT) {
+        return 1;
+    }
 
     uint8_t value = display[byteY][byteX];
     if (colour == BLACK) {
@@ -219,7 +234,7 @@ int write_pixel(int colour, int x, int y) {
     return 0;
 }
 
-int write_string(char* font, int fontsize, int x, int y, char* string) {
+int write_string(stbtt_fontinfo* fontInfo, int fontsize, int x, int y, char* string) {
 
     const char* const_str = string;
     wchar_t dst[100];
@@ -242,8 +257,7 @@ int write_string(char* font, int fontsize, int x, int y, char* string) {
             x = x + height;
             continue;
         }
-        write_char(font, fontsize, x, y + length, &width, &height, dst[i]);
-//        display_line_X(y + length);
+        write_char(fontInfo, fontsize, x, y + length, &width, &height, dst[i]);
         length += width;
     }
     return 0;

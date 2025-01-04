@@ -42,12 +42,14 @@ int pattern_display();
 // The display should be left in sleep mode when not in use
 int sleep_display();
 
+stbtt_fontinfo* init_font(char* font, int fontsize);
+
 // Writes a character to the display ram with the specified font, fontsize, and x y coords.
 // char* font => file path to the .ttf font file to be used.
 // Currently no support for .ttc font file collections.
-int write_char(char* font, int fontsize, int x, int y, int *width, int *height, int character);
+int write_char(stbtt_fontinfo* fontInfo, int fontsize, int x, int y, int *width, int *height, int character);
 
-int write_string(char* font, int fontsize, int x, int y, char*string);
+int write_string(stbtt_fontinfo* fontInfo, int fontsize, int x, int y, char*string);
 
 // Writes a pixel to the display ram at the coords
 int write_pixel(int colour, int x, int y);
