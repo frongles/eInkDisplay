@@ -3,7 +3,6 @@
 .idea*
 .vscode*
 *~
-extern/
-prod/bin/*
-prod/obj/*
-prod/fonts/*
+bin/*
+obj/*
+fonts/*
