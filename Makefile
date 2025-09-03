@@ -7,8 +7,6 @@ OBJ_PATH = ./obj
 BIN_PATH = ./bin
 TARG = $(BIN_PATH)/test
 
-SRC_NAMES := $(TARG) ftp_tools sock_util log
-
 SRC := $(wildcard $(SRC_PATH)/*.c)
 
 OBJ := $(patsubst $(SRC_PATH)/%.c, $(OBJ_PATH)/%.o, $(SRC))
